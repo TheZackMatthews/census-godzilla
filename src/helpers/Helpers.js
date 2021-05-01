@@ -2,10 +2,11 @@ import { intersect } from "@turf/turf";
 import * as d3 from "d3";
 
 export const matchAndStrip = (str, regex, strip, rep) => {
+  var match;
   if (regex) {
-    var match = str.match(regex);
+    match = str.match(regex);
   } else {
-    var match = 1;
+    match = 1;
   }
   if (match) {
     for (let i = 0; i < strip.length; i++) {
@@ -105,7 +106,6 @@ export const drawChart = (data, target) => {
   // set the ranges
   var y = d3.scaleBand().range([height, 0]).padding(0.1);
   var x = d3.scaleLinear().range([0, width]);
-
   var svg = d3
     .select(target)
     .append("svg")
