@@ -86,15 +86,15 @@ export class CensusSummary {
 	}
 
 	sumObjects = <T extends AnyObject>(objs: T[]) => {
-		console.log('objsforsum', objs);
+		//console.log('objsforsum', objs);
 
 		return objs.reduce((acc: Partial<T>, val: T) => {
-      // FIXME TypeError: Cannot convert undefined or null to object. Maybe this is fixed now?
-      if (!val) return {};
+      if (!val) return acc;
 			Object.keys(val).map<T>(
         (k) => ((acc as AnyObject)[k] = (acc[k] || 0) + val[k]));
 			return acc;
 		}, {});
+
 	};
 
 	// avgOfObjects = (objs) => {
@@ -104,9 +104,12 @@ export class CensusSummary {
 	// };
 
 	getTotals() {
-		this.totals = this.sumObjects(Object.values(this.data));
+    this.totals = this.sumObjects(Object.values(this.data));
+    console.log('totals!', this.totals)
 		//get shares
-		return Object.entries(this.totals).map(([k, v]) => (this.shares[k] = v / this.totals['Total']));
+		return Object.entries(this.totals).map(
+      ([k, v]) => (this.shares[k] = v / this.totals['Total'])
+    );
 	}
 
 	//  calcAverage() {
@@ -116,15 +119,16 @@ export class CensusSummary {
 
 	//NOTE this causes errors in older browsers. Could do a polyfill here
 	mapCodeToDescriptor(data: AnyObject) {
-		return Object.assign(
-			{},
+    return Object.assign(
+      // @ts-ignore
 			...Object.entries(data).map(([k, v]) => ({
 				[this.varMap[k]]: v,
 			}))
 		);
 	}
 
-	sumShares(varList: string[], newVar: string) {
+	sumShares(varList: string[], newVar: string) { //FIXME Shares are messed up when we recieve it here
+
 		const newVal = Object.entries(this.shares).reduce((acc, [k, v]) => {
 			if (varList.includes(k)) {
 				acc += v ? v : 0; // If v is undefined, add nothing
@@ -132,7 +136,7 @@ export class CensusSummary {
 			}
 			return acc;
 		}, 0);
-		this.shares[newVar] = newVal; //TODO newVal should be of type number
+		this.shares[newVar] = newVal;
 	}
 
 	// sumDataVars(varList, newVar) {
@@ -150,7 +154,7 @@ export class CensusSummary {
 	mapDataToDescriptor() {
 		Object.entries(this.data).forEach(([k, v]) => {
 			const newItem = this.mapCodeToDescriptor(v);
-			this.data[k] = newItem; // TODO newItem should be of type EducationCategories or RaceCategories
+			this.data[k] = newItem;
 		});
 	}
 
