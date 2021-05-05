@@ -18,10 +18,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react",
-    "resolveJsonModule": true,
-    "esModuleInterop": true
   },
   "include": [
     "src"
-  ]
+, "jest.config.js"  ]
 }

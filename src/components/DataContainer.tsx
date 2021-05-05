@@ -1,40 +1,43 @@
-//backend bug calculating share in age data
 import '../css/dataContainer.css';
 import '../css/styles.css';
 
 import React, { useEffect, useState } from 'react';
-import { CensusSummary, edVars, raceVars, EducationCategories, RaceCategories} from '../data/ReferenceData';
+import { CensusSummary, edVars, raceVars, EducationCategories } from '../data/ReferenceData';
 import { createChartRequest, fetchCensusData } from '../helpers/Helpers';
 import ChartSwiper from './Swiper';
 import { Feature, Polygon, Properties } from '@turf/turf';
 
+interface Props {
+  onScreen: Feature<Polygon, Properties>[] | undefined;
+	setShowDataContainer: React.Dispatch<React.SetStateAction<Boolean>>;
+	showDataContainer: Boolean;
+};
+
 type AnyObject = { [key: string]: any };
 
+// Function that makes calls to /helpers. Kind of like a Summary class
 const createSummaryData = (
-data: {[key: string]:EducationCategories},
-varMap: AnyObject,
-sumVars: {[key: string]: string[]},
-reCalc?: boolean
+	data: { [key: string]: EducationCategories },
+	varMap: AnyObject,
+	sumVars: { [key: string]: string[] },
+	reCalc?: boolean
 ) => {
 	const summary = new CensusSummary(data, varMap);
 	if (!reCalc) summary.mapDataToDescriptor();
 	summary.getTotals();
-  console.log('summary initial',summary)
 	Object.entries(sumVars).forEach(([key, valArr]) => {
 		summary.sumShares(valArr, key);
 	});
-  console.log('summary end',summary)
 	return summary;
 };
 
-const DataContainer = ({ onScreen }: { onScreen: Feature<Polygon, Properties>[] | undefined}) => {
+const DataContainer = ({ onScreen, setShowDataContainer, showDataContainer }: Props) => {
 	const [summary, setSummary] = useState({ race: {}, education: {} });
-	const [data, setData] = useState<AnyObject>({}); // This could be better typed with an interface that has race and education?
-	// const [closeChart, setCloseChart] = useState(false);
-
+	const [data, setData] = useState<AnyObject>({});
+	const [ethnicDataLoad, setEthnicDataLoad] = useState<Boolean>(false);
+	const [educationDataLoad, setEducationDataLoad] = useState<Boolean>(false);
 
 	useEffect(() => {
-		console.log('fetching data');
 		const raceTables = Object.keys(raceVars).map((item) => item.split('_')[1]);
 		const raceRequest = createChartRequest('B03002', raceTables);
 		const edTables = Object.keys(edVars).map((item) => item.split('_')[1]);
@@ -47,8 +50,10 @@ const DataContainer = ({ onScreen }: { onScreen: Feature<Polygon, Properties>[] 
 			delete raceSummary.shares['Total'];
 			setData((prevData) => ({ ...prevData, race: raceSummary.data }));
 			setSummary(() => ({
-        ...summary,
-        race: raceSummary.shares }));
+				...summary,
+				race: raceSummary.shares,
+			}));
+			setEthnicDataLoad(true);
 		});
 
 		fetchCensusData(edRequest).then((result) => {
@@ -69,30 +74,30 @@ const DataContainer = ({ onScreen }: { onScreen: Feature<Polygon, Properties>[] 
 				...prevData,
 				education: edSummary.shares,
 			}));
+			setEducationDataLoad(true);
 		});
 	}, []);
 
-	console.log('data', data);
 	useEffect(() => {
 		if (onScreen && Object.keys(data).length) {
 			const onScreenGeoIDs = [];
-			for (let item of onScreen) {
-        const geoId = item.properties?.GEO_ID.split('US')[1];
-        onScreenGeoIDs.push(geoId);
+			for (const item of onScreen) {
+				const geoId = item.properties?.GEO_ID.split('US')[1];
+				onScreenGeoIDs.push(geoId);
 			}
-			const onScreenRace = Object.assign({},
+			const onScreenRace = Object.assign(
+				{},
 				...onScreenGeoIDs.map((key) => ({
-					[key]: (data.race) ? data.race[key] : {},
+					[key]: data.race ? data.race[key] : {},
 				}))
 			);
 
-			const onScreenEd = Object.assign({},
+			const onScreenEd = Object.assign(
+				{},
 				...onScreenGeoIDs.map((key) => ({
-          [key]: (data.education) ? data.education[key] : {},
+					[key]: data.education ? data.education[key] : {},
 				}))
 			);
-      console.log('🛹', onScreenRace, onScreenEd)
-      console.log(data)
 			const raceSummary = createSummaryData(
 				onScreenRace,
 				raceVars,
@@ -125,12 +130,12 @@ const DataContainer = ({ onScreen }: { onScreen: Feature<Polygon, Properties>[] 
 		}
 	}, [onScreen]);
 
-	return summary.race && summary.education && onScreen ? (
-		<div id="dataContainer" className="dataContainer">
-		<ChartSwiper data = {summary} />
+	return onScreen && ethnicDataLoad && educationDataLoad ? (
+		<div id="dataContainer" className={showDataContainer ? 'dataContainer' : 'hidden'}>
+			<ChartSwiper data={summary} setShowDataContainer={setShowDataContainer} />
 		</div>
 	) : (
-		<h3>'Data is loading'</h3>
+		<h3>Data is loading</h3>
 	);
 };
 
